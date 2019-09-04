@@ -24,7 +24,7 @@ conv_kernel_size: 100
 att_odim: 200
 embedding_dim: 50
 learning_rate: 0.0005
-weight_decay: 0.0000001
+weight_decay: 0.000001
 max_grad_norm: 5
 load_model_path: ./models/chime3_base/chime3_noisy_best
 retrieve_learning_rate: 0.0005

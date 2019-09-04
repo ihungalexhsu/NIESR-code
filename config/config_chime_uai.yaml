@@ -7,7 +7,7 @@ max_feature_length: 2040
 min_feature_length: 128
 max_text_length: 212
 min_text_length: 3
-max_dec_timesteps: 220
+max_dec_timesteps: 215
 batch_size: 24
 shuffle: True
 ls_weight: 0.05
@@ -27,8 +27,8 @@ att_odim: 200
 embedding_dim: 50
 learning_rate_m1: 0.0005
 learning_rate_m2: 0.001
-weight_decay_m1: 0.0000001
-weight_decay_m2: 0.0000001
+weight_decay_m1: 0.000001
+weight_decay_m2: 0.000001
 max_grad_norm: 5
 load_model_path: ./models/chime3_uai/chime3_uai_best
 retrieve_learning_rate1: 0.0005
@@ -38,7 +38,7 @@ init_tf_rate: 1.0
 tf_start_decay_epochs: 40
 tf_rate_lowerbound: 1.0
 tf_decay_epochs: 90
-epochs: 150
+epochs: 300
 add_gaussian: False
 gaussian_epoch: 20
 gaussian_std: 0.075
@@ -48,7 +48,7 @@ model_name: chime3_uai
 vocab_path: ./data/fbank40_new_Norm_addsimu/vocab_dict.p
 non_lang_syms_path: ./data/fbank40_new_Norm_addsimu/non_lang_syms.p
 sample_num: 5
-early_stop_start_epoch: 50
+early_stop_start_epoch: 80
 early_stop: 30
 test_file_name: test/predict_chime3_uai
 disentangle_hidden_dim: 200

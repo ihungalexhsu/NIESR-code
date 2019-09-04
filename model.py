@@ -300,11 +300,12 @@ class disentangle_clean(nn.Module):
         output,_ = self.LSTM(clean_pad) # batch_size x seq_len x hidden_dim
         output, _ = pad_packed_sequence(output, batch_first=True,
                                         total_length=total_length)
-        output = F.dropout(output, 0.1, training=self.training)
+        output = F.dropout(output, 0.2, training=self.training)
         output = self.dnn(output)
         output = self.activation(output)
-        output = F.dropout(output, 0.1, training=self.training)
+        output = F.dropout(output, 0.2, training=self.training)
         output = self.output_layer(output)
+        output = F.dropout(output, 0.2, training=self.training)
         output = torch.tanh(output)
         return output
 
@@ -323,11 +324,12 @@ class disentangle_nuisance(nn.Module):
         output, _ = self.LSTM(nuisance_pad) # batch_size x seq_len x hidden_dim
         output, _ = pad_packed_sequence(output, batch_first=True,
                                         total_length=total_length)
-        output = F.dropout(output, 0.1, training=self.training)
+        output = F.dropout(output, 0.2, training=self.training)
         output = self.dnn(output)
         output = self.activation(output)
-        output = F.dropout(output, 0.1, training=self.training)
+        output = F.dropout(output, 0.2, training=self.training)
         output = self.output_layer(output)
+        output = F.dropout(output, 0.2, training=self.training)
         output = torch.tanh(output)
         return output
 

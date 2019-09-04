@@ -469,7 +469,6 @@ class UAI_seq2seq(object):
                 (total_loss_disnoise / total_steps))
 
     def train(self):
-
         best_cer = 200
         best_model = None
         early_stop_counter = 0
@@ -480,7 +479,7 @@ class UAI_seq2seq(object):
         tf_decay_epochs = self.config['tf_decay_epochs']
         tf_rate_lowerbound = self.config['tf_rate_lowerbound']
 
-	    # lr scheduler
+        # lr scheduler
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_m1,
                                                                mode='min',
                                                                factor=0.5,
@@ -488,7 +487,6 @@ class UAI_seq2seq(object):
                                                                verbose=True,
                                                                min_lr=1e-7)
         print('------start training-------')
-
         for epoch in range(self.config['epochs']):
             # schedule
             #scheduler.step(cer)
@@ -500,7 +498,6 @@ class UAI_seq2seq(object):
                     tf_rate = tf_rate_lowerbound
             else:
                 tf_rate = init_tf_rate
-
             # train one epoch
             train_loss = self.train_one_epoch(epoch, tf_rate)
 
