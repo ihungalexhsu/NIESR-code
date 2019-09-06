@@ -6,3 +6,4 @@ Code for NIESR: Nuisance Invariant End-to-end Speech Recognition
 - pytorch 1.1
 - editdistance (pip install editdistance)
 - PyYAML (pip install pyyaml)
+- tensorboardX

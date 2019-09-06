@@ -11,6 +11,9 @@ import yaml
 import os
 import pickle
 
+torch.backends.cudnn.deterministic = True                                        
+torch.backends.cudnn.benchmark = False   
+
 class UAI_seq2seq(object):
     def __init__(self, config, beta, gamma, delta, load_model=False):
         self.config = config
@@ -348,68 +351,39 @@ class UAI_seq2seq(object):
         total_loss_reconstruction = 0.
         total_loss_disclean = 0.
         total_loss_disnoise = 0.
-        
-        #M2
         total_loss_disclean_dis = 0.
         total_loss_disnoise_dis = 0.
-        for cnt in range(self.config['m2_train_freq']):
-            sub_total_loss_disclean = 0.
-            sub_total_loss_disnoise = 0.
-            print()
-            for train_steps, data in enumerate(self.train_lab_loader):
-                bos = self.vocab['<BOS>']
-                eos = self.vocab['<EOS>']
-                pad = self.vocab['<PAD>']
-                xs, ilens, ys, ys_in, ys_out, _, _, trans = to_gpu(data, bos, eos, pad)
-
-                # add gaussian noise after gaussian_epoch
-                if self.config['add_gaussian'] and epoch >= self.config['gaussian_epoch']:
-                    gau = np.random.normal(0, self.config['gaussian_std'],
-                                           (xs.size(0), xs.size(1), xs.size(2)))
-                    gau = cc(torch.from_numpy(np.array(gau, dtype=np.float32)))
-                    xs = xs + gau
-
-                clean_repre, enc_lens, _, _ = self.encoder(xs, ilens)
-                nuisance, nuisance_lens, _, _ =self.encoder2(xs, ilens)
-                predict_nuisance = self.disen_clean(clean_repre, enc_lens)
-                predict_clean = self.disen_nuisance(nuisance, nuisance_lens)
-                loss_disclean = torch.mean((predict_clean-clean_repre.detach())**2)*self.gamma
-                sub_total_loss_disclean += loss_disclean.item()
-                loss_disnoise = torch.mean((predict_nuisance-nuisance.detach())**2)*self.gamma
-                sub_total_loss_disnoise += loss_disnoise.item()
-                
-                self.optimizer_m2.zero_grad()
-                (loss_disclean+loss_disnoise).backward()
-                torch.nn.utils.clip_grad_norm_(self.params_m2, max_norm=self.config['max_grad_norm'])
-                self.optimizer_m2.step()
-            
-                total_loss_disclean_dis += (sub_total_loss_disclean/self.config['m2_train_freq'])
-                total_loss_disnoise_dis += (sub_total_loss_disnoise/self.config['m2_train_freq'])
-                
-                # print message
-                print(f'epoch: {epoch}, [{train_steps + 1}/{total_steps}],'
-                      f'dis_clean_l: {loss_disclean:.4f}, dis_noise_l:{loss_disnoise:.4f}', end='\r')
-                # add to logger
-                tag = self.config['tag']
-                self.logger.scalar_summary(tag=f'{tag}/train/m2_disen_clean_loss',
-                                           value=(loss_disclean.item()/self.gamma), 
-                                           step=(epoch*(self.config['m2_train_freq'])+cnt)*total_steps+train_steps+1)
-                self.logger.scalar_summary(tag=f'{tag}/train/m2_disen_noise_loss',
-                                           value=(loss_disnoise.item()/self.gamma),
-                                           step=(epoch*(self.config['m2_train_freq'])+cnt)*total_steps+train_steps+1)
-        print () 
-        # M1
+        
         for train_steps, data in enumerate(self.train_lab_loader):
             bos = self.vocab['<BOS>']
             eos = self.vocab['<EOS>']
             pad = self.vocab['<PAD>']
             xs, ilens, ys, ys_in, ys_out, _, _, trans = to_gpu(data, bos, eos, pad)
-            # add gaussian noise after gaussian_epoch
-            if self.config['add_gaussian'] and epoch >= self.config['gaussian_epoch']:
-                gau = np.random.normal(0, self.config['gaussian_std'], (xs.size(0), xs.size(1), xs.size(2)))
-                gau = cc(torch.from_numpy(np.array(gau, dtype=np.float32)))
-                xs = xs + gau
-
+            # M2
+            for cnt in range(self.config['m2_train_freq']):
+                clean_repre, enc_lens, _, _ = self.encoder(xs, ilens)
+                nuisance, nuisance_lens, _, _ =self.encoder2(xs, ilens)
+                predict_nuisance = self.disen_clean(clean_repre, enc_lens)
+                predict_clean = self.disen_nuisance(nuisance, nuisance_lens)
+                loss_disclean = torch.mean((predict_clean-clean_repre.detach())**2)*self.gamma
+                loss_disnoise = torch.mean((predict_nuisance-nuisance.detach())**2)*self.gamma
+            
+                self.optimizer_m2.zero_grad()
+                (loss_disclean+loss_disnoise).backward()
+                torch.nn.utils.clip_grad_norm_(self.params_m2, max_norm=self.config['max_grad_norm'])
+                self.optimizer_m2.step()
+                total_loss_disclean_dis += (loss_disclean/self.config['m2_train_freq'])
+                total_loss_disnoise_dis += (loss_disnoise/self.config['m2_train_freq'])
+            
+                # add to logger
+                tag = self.config['tag']
+                self.logger.scalar_summary(tag=f'{tag}/train/m2_disen_clean_loss',
+                                           value=(loss_disclean.item()/self.gamma), 
+                                           step=(epoch*self.config['m2_train_freq'])*total_steps+(train_steps*self.config['m2_train_freq'])+cnt+1)
+                self.logger.scalar_summary(tag=f'{tag}/train/m2_disen_noise_loss',
+                                           value=(loss_disnoise.item()/self.gamma),
+                                           step=(epoch*self.config['m2_train_freq'])*total_steps+(train_steps*self.config['m2_train_freq'])+cnt+1)
+            #M1
             # input the encoder
             clean_repre, enc_lens, _, _ = self.encoder(xs, ilens)
             nuisance, nuisance_lens, _, _ = self.encoder2(xs, ilens)
@@ -444,9 +418,7 @@ class UAI_seq2seq(object):
             self.optimizer_m1.zero_grad()
             (loss+recons_loss+loss_disclean+loss_disnoise).backward()
             torch.nn.utils.clip_grad_norm_(self.params_m1, max_norm=self.config['max_grad_norm'])
-
             self.optimizer_m1.step()
-
             print(f'epoch: {epoch}, [{train_steps + 1}/{total_steps}], loss: {loss:.3f},'
                   f'rec_l: {recons_loss:.3f}, dis_clean:{loss_disclean:.4f},'
                   f'dis_noise:{loss_disnoise:.4f}', end='\r')
@@ -461,7 +433,7 @@ class UAI_seq2seq(object):
                                        value=(loss_disclean.item())/(self.gamma),
                                        step=epoch * total_steps + train_steps + 1)
             self.logger.scalar_summary(tag=f'{tag}/train/m1_disen_noise_loss',
-                                       value=(loss_disnoise.item())/self.gamma,
+                                       value=(loss_disnoise.item())/(self.gamma),
                                        step=epoch * total_steps + train_steps + 1)
         return ((total_loss_prediction / total_steps),
                 (total_loss_reconstruction / total_steps),
@@ -469,6 +441,8 @@ class UAI_seq2seq(object):
                 (total_loss_disnoise / total_steps))
 
     def train(self):
+        torch.manual_seed(123)                                             
+        torch.cuda.manual_seed(123)  
         best_cer = 200
         best_model = None
         early_stop_counter = 0

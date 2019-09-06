@@ -11,6 +11,9 @@ import yaml
 import os
 import pickle
 
+torch.backends.cudnn.deterministic = True                                        
+torch.backends.cudnn.benchmark = False
+
 class Seq2seq(object):
     def __init__(self, config, load_model=False):
 
@@ -244,6 +247,8 @@ class Seq2seq(object):
         return total_loss / total_steps
 
     def train(self):
+        torch.manual_seed(123)                                             
+        torch.cuda.manual_seed(123)  
         best_cer = 200
         best_model = None
         early_stop_counter = 0

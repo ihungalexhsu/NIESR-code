@@ -12,6 +12,9 @@ from torch.distributions.categorical import Categorical
 import random
 import os
 
+torch.backends.cudnn.deterministic = True                                        
+torch.backends.cudnn.benchmark = False
+
 class pBLSTM(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, n_layers, subsample, dropout_rate, output_dim):
         super(pBLSTM, self).__init__()
